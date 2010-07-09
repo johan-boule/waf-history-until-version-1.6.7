@@ -307,7 +307,7 @@ def build(ctx):
 	print('building the software')
 ---------------
 
-Without surprize, the execution output will look like the following:
+Without surprise, the execution output will look like the following:
 
 [source,shishell]
 ---------------
@@ -327,7 +327,7 @@ Waf: Leaving directory `/tmp/smallproject/build_directory'
 'build' finished successfully (0.004s)
 ---------------
 
-Since the command `waf build` is executed very often, a shortcut is provided to call it implicitely:
+Since the command `waf build` is executed very often, a shortcut is provided to call it implicitly:
 
 [source,shishell]
 ---------------
