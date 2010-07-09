@@ -145,7 +145,7 @@ def configure(conf):
 	conf.find_program('test')
 ---------------
 
-When a test fails, the exception 'Configure.ConfigurationException' is raised. For example, such exceptions are thrown when a program could not be found:
+When a test fails, the exception 'Configure.ConfigurationError' is raised. For example, such exceptions are thrown when a program could not be found:
 
 [source,python]
 ---------------
