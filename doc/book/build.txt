@@ -222,7 +222,7 @@ $ waf distclean configure build --exe
 Waf: Entering directory `/tmp/smallproject/build'
 before the build is started <1>
 Waf: Leaving directory `/tmp/smallproject/build'
-hello <2>
+/sbin/ldconfig: cannot create /etc/ld.so.cache~: Permission denied <2>
 'build' finished successfully (0.008s)
 ---------------
 
