@@ -66,7 +66,7 @@ $ tree
 
 === Adding project commands
 
-In the last section, we have see the use of the command 'configure' to initialize a project. Waf commands are special functions declared in the top-level project file and which may be called explicitly by `waf commandname`. Let us create two new commands _print_ping_ and _print_pong_ in the project created previously ('/tmp/smallproject/')
+In the last section, we have seen the use of the command 'configure' to initialize a project. Waf commands are special functions declared in the top-level project file and which may be called explicitly by `waf commandname`. Let us create two new commands _print_ping_ and _print_pong_ in the project created previously ('/tmp/smallproject/')
 
 [source,python]
 ---------------
