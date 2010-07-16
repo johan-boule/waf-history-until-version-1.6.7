@@ -128,7 +128,7 @@ class unit_test(object):
 						add_path(v, ld_library_path, 'LD_LIBRARY_PATH')
 
 				pp = Utils.pproc.Popen(filename, **kwargs)
-				pp.wait()
+				(out, err) = pp.communicate() # uh, and the output is ignored?? - fortunately this is going to disappear
 
 				result = int(pp.returncode == self.returncode_ok)
 
