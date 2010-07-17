@@ -703,10 +703,12 @@ class Task(TaskBase):
 			pass
 
 		try:
+			i = 0
 			for node in self.outputs:
 				variant = node.variant(env)
-				dest = os.path.join(tmpdir, node.name)
+				dest = os.path.join(tmpdir, str(i) + node.name)
 				shutil.copy2(node.abspath(env), dest)
+				i += 1
 		except (OSError, IOError):
 			try:
 				shutil.rmtree(tmpdir)
@@ -752,10 +754,11 @@ class Task(TaskBase):
 		except OSError:
 			return None
 
+		i = 0
 		for node in self.outputs:
 			variant = node.variant(env)
 
-			orig = os.path.join(dname, node.name)
+			orig = os.path.join(dname, str(i) + node.name)
 			try:
 				shutil.copy2(orig, node.abspath(env))
 				# mark the cache file as used recently (modified)
@@ -763,6 +766,7 @@ class Task(TaskBase):
 			except (OSError, IOError):
 				debug('task: failed retrieving file')
 				return None
+			i += 1
 
 		# is it the same folder?
 		try:
