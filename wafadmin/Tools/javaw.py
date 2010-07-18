@@ -104,7 +104,7 @@ def apply_java(self):
 	src_nodes = [x for x in srcdir_node.ant_glob(self.source_re, flat=False)]
 	bld_nodes = [x.change_ext('.class') for x in src_nodes]
 
-	self.env['OUTDIR'] = [srcdir_node.abspath(self.env)]
+	self.env['OUTDIR'] = [srcdir_node.bldpath(self.env)]
 
 	tsk = self.create_task('javac')
 	tsk.set_inputs(src_nodes)
