@@ -695,7 +695,7 @@ class Task(TaskBase):
 			return None
 
 		dname = os.path.join(Options.cache_global, ssig)
-		tmpdir = tempfile.mkdtemp(prefix=Options.cache_global)
+		tmpdir = tempfile.mkdtemp(prefix=Options.cache_global + os.sep + 'waf')
 
 		try:
 			shutil.rmtree(dname)
