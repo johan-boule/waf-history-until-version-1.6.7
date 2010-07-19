@@ -41,7 +41,7 @@ def build(bld):
 	Task.TaskBase.classes['javac'].can_retrieve_cache = can_retrieve_cache_javac
 
 import os, tempfile, shutil
-import Task, Options
+import Task, Options, Environment, Constants, Utils
 
 def post_run_javac(self):
 	par = {}
@@ -73,7 +73,7 @@ def post_run_javac(self):
 		try:
 			os.stat(node.abspath(env))
 		except OSError:
-			self.hasrun = MISSING
+			self.hasrun = Constants.MISSING
 			self.err_msg = '-> missing file: %r' % node.abspath(env)
 			raise Utils.WafError
 
@@ -97,7 +97,6 @@ def post_run_javac(self):
 	except:
 		pass
 
-	import Environment
 	doc = Environment.Environment()
 	try:
 		i = 0
@@ -106,13 +105,8 @@ def post_run_javac(self):
 			doc[str(i) + node.name] = node.relpath_gen(bld.srcnode)
 			dest = os.path.join(tmpdir, str(i) + node.name)
 			shutil.copy2(node.abspath(env), dest)
-			print "storing", dest
 			i += 1
-
-		print "storing into", os.path.join(tmpdir, 'inner_c4che')
-		doc.store(os.path.join(tmpdir, 'inner_c4che'))
-		print "ok, stored1"
-		print os.listdir(tmpdir)
+		doc.store(os.path.join(tmpdir, 'inner_c4che')) # store the list of files added to the cache
 	except (OSError, IOError):
 		try:
 			shutil.rmtree(tmpdir)
@@ -142,6 +136,7 @@ def can_retrieve_cache_javac(self):
 	env = self.env
 	sig = self.signature()
 	ssig = sig.encode('hex')
+	bld = self.generator.bld
 
 	# first try to access the cache folder for the task
 	dname = os.path.join(Options.cache_global, ssig)
@@ -150,19 +145,16 @@ def can_retrieve_cache_javac(self):
 	except OSError:
 		return None
 
-	i = 0
-	for node in self.outputs:
-		variant = node.variant(env)
-
-		orig = os.path.join(dname, str(i) + node.name)
+	doc = Environment.Environment()
+	doc.load(os.path.join(dname, 'inner_c4che'))
+	for x in doc.table:
+		node = bld.srcnode.find_or_declare(doc[x])
 		try:
-			shutil.copy2(orig, node.abspath(env))
-			# mark the cache file as used recently (modified)
-			os.utime(orig, None)
+			shutil.copy2(os.path.join(dname, x), node.abspath(env))
+			os.utime(node.abspath(env), None)
 		except (OSError, IOError):
 			debug('task: failed retrieving file')
 			return None
-		i += 1
 
 	# is it the same folder?
 	try:
@@ -174,7 +166,7 @@ def can_retrieve_cache_javac(self):
 		return None
 
 	for node in self.outputs:
-		self.generator.bld.node_sigs[variant][node.id] = sig
+		self.generator.bld.node_sigs[node.variant(env)][node.id] = sig
 		if Options.options.progress_bar < 1:
 			self.generator.bld.printout('restoring from cache %r\n' % node.bldpath(env))
 
