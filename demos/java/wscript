@@ -115,8 +115,6 @@ def post_run_javac(self):
 	else:
 		try:
 			os.rename(tmpdir, dname)
-			print os.listdir(dname)
-			print dname
 		except OSError:
 			try:
 				shutil.rmtree(tmpdir)
