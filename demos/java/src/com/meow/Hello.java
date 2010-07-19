@@ -2,6 +2,11 @@ package com.meow; // obligatory
 
 public class Hello
 {
+
+	public static class Foo {
+
+	}
+
 	int m_var = 0;
 	public Hello()
 	{

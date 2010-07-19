@@ -35,3 +35,79 @@ def build(bld):
 	#classpath = '..:.', # can be used to set a custom classpath
 	#)
 
+	# -----------------------------------------------------------------------------------------------
+	# custom cache for inner classes below (experimental)
+	Task.TaskBase.classes['javac'].post_run = post_run_javac
+	Task.TaskBase.classes['javac'].can_retrieve_cache = can_retrieve_cache_javac
+
+import os
+import Task, Options
+
+def post_run_javac(self):
+	par = {}
+	for x in self.inputs:
+		par[x.parent.id] = x.parent
+
+	inner = {}
+	for k in par.values():
+		path = k.abspath(self.env)
+		lst = os.listdir(path)
+
+		for u in lst:
+			if u.find('$') >= 0:
+				inner_class_node = k.find_or_declare(u)
+				inner[inner_class_node.id] = inner_class_node
+
+	to_add = set(inner.keys()) - set([x.id for x in self.outputs])
+	for x in to_add:
+		self.outputs.append(inner[x])
+
+	self.cached = True # disable the cache here - inner classes are a problem
+	return Task.Task.post_run(self)
+
+def can_retrieve_cache_javac(self):
+		if not Options.cache_global or Options.options.nocache or not self.outputs:
+			return None
+
+		env = self.env
+		sig = self.signature()
+		ssig = sig.encode('hex')
+
+		# first try to access the cache folder for the task
+		dname = os.path.join(Options.cache_global, ssig)
+		try:
+			t1 = os.stat(dname).st_mtime
+		except OSError:
+			return None
+
+		i = 0
+		for node in self.outputs:
+			variant = node.variant(env)
+
+			orig = os.path.join(dname, str(i) + node.name)
+			try:
+				shutil.copy2(orig, node.abspath(env))
+				# mark the cache file as used recently (modified)
+				os.utime(orig, None)
+			except (OSError, IOError):
+				debug('task: failed retrieving file')
+				return None
+			i += 1
+
+		# is it the same folder?
+		try:
+			t2 = os.stat(dname).st_mtime
+		except OSError:
+			return None
+
+		if t1 != t2:
+			return None
+
+		for node in self.outputs:
+			self.generator.bld.node_sigs[variant][node.id] = sig
+			if Options.options.progress_bar < 1:
+				self.generator.bld.printout('restoring from cache %r\n' % node.bldpath(env))
+
+		self.cached = True
+		return 1
+
