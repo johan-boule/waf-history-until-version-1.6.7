@@ -159,6 +159,7 @@ def post_run_javac(self):
 	for x in to_add:
 		self.outputs.append(inner[x])
 
+	self.cached = True # disable the cache here - inner classes are a problem
 	return Task.Task.post_run(self)
 cls.post_run = post_run_javac
 
