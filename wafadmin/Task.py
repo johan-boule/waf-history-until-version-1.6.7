@@ -539,7 +539,7 @@ class Task(TaskBase):
 		self.inputs  = []
 		self.outputs = []
 
-		self.deps_nodes = []
+		self.dep_nodes = []
 		self.run_after = []
 
 		# Additionally, you may define the following
