@@ -593,7 +593,7 @@ class Task(TaskBase):
 	def add_file_dependency(self, filename):
 		"TODO user-provided file dependencies"
 		node = self.generator.bld.path.find_resource(filename)
-		self.deps_nodes.append(node)
+		self.dep_nodes.append(node)
 
 	def signature(self):
 		# compute the result one time, and suppose the scan_signature will give the good result
@@ -835,7 +835,7 @@ class Task(TaskBase):
 						v = v() # dependency is a function, call it
 					up(v)
 
-		for x in self.deps_nodes:
+		for x in self.dep_nodes:
 			v = bld.node_sigs[x.variant(self.env)][x.id]
 			up(v)
 
