@@ -597,20 +597,20 @@ def apply_vnum(self):
 	bld.symlink_as(path + os.sep + libname, name3)
 
 	# the following task is just to enable execution from the build dir :-/
-	self.create_task('vnum', node, node.parent.find_or_declare(name2))
-	self.create_task('vnum', node, node.parent.find_or_declare(name3))
+	self.create_task('vnum', node, [node.parent.find_or_declare(name2), node.parent.find_or_declare(name3)])
 
 def exec_vnum_link(self):
-	path = self.outputs[0].abspath(self.env)
-	try:
-		os.remove(path)
-	except OSError:
-		pass
+	for x in self.outputs:
+		path = x.abspath(self.env)
+		try:
+			os.remove(path)
+		except OSError:
+			pass
 
-	try:
-		os.symlink(self.inputs[0].name, path)
-	except OSError:
-		return 1
+		try:
+			os.symlink(self.inputs[0].name, path)
+		except OSError:
+			return 1
 
 cls = Task.task_type_from_func('vnum', func=exec_vnum_link, ext_in='.bin', color='CYAN')
 cls.quiet = 1
