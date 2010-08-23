@@ -1,3 +1,7 @@
+NEW IN WAF 1.5.19
+-----------------
+* firxed #725 (docs)
+
 NEW IN WAF 1.5.18
 -----------------
 * Fixed a typo in flex.py (python < 2.6)
