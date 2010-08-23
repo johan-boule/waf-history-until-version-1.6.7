@@ -94,7 +94,7 @@ def build(bld):
 back = False
 def package(ctx): <2>
 	global back
-	Scripting.commands.insert(0, 'package') <3>
+	Scripting.commands.insert(0, 'create_package') <3>
 	Scripting.commands.insert(0, 'install') <4>
 	back = Options.options.destdir <5>
 	Options.options.destdir = '/tmp/foo'
