@@ -1,6 +1,7 @@
 NEW IN WAF 1.5.19
 -----------------
-* firxed #725 (docs)
+* fixed #725 (docs)
+* optimization in preproc.py
 
 NEW IN WAF 1.5.18
 -----------------
