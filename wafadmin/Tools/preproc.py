@@ -709,12 +709,6 @@ class c_parser(object):
 		if ve: debug('preproc: line is %s - %s state is %s', token, line, self.state)
 		state = self.state
 
-		# make certain we define the state if we are about to enter in an if block
-		if token in ['ifdef', 'ifndef', 'if']:
-			state.append(undefined)
-		elif token == 'endif':
-			state.pop()
-
 		if token == 'endif':
 			state.pop()
 		elif token == 'elif':
