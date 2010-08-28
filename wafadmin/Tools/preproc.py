@@ -620,13 +620,13 @@ class c_parser(object):
 		except:
 			nd = node.bld.cache_nd = {}
 
-		tup = hash((id(node), filename))
-		if tup in nd:
+		tup = (node.id, filename)
+		try:
 			return nd[tup]
-
-		ret = node.find_resource(filename)
-		nd[tup] = ret
-		return ret
+		except KeyError:
+			ret = node.find_resource(filename)
+			nd[tup] = ret
+			return ret
 
 	def tryfind(self, filename):
 		self.curfile = filename
