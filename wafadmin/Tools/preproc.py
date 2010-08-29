@@ -662,14 +662,15 @@ class c_parser(object):
 		except KeyError:
 			pass
 		else:
-			self.lines = lns + self.lines
+			self.lines.extend(lns)
 			return
 
 		try:
 			lines = filter_comments(filepath)
 			lines.append((POPFILE, ''))
+			lines.reverse()
 			pc[filepath] = lines # cache the lines filtered
-			self.lines = lines + self.lines
+			self.lines.extend(lines)
 		except IOError:
 			raise PreprocError("could not read the file %s" % filepath)
 		except Exception:
@@ -691,10 +692,12 @@ class c_parser(object):
 
 		self.addlines(node)
 		if env['DEFLINES']:
-			self.lines = [('define', x) for x in env['DEFLINES']] + self.lines
+			lst = [('define', x) for x in env['DEFLINES']]
+			lst.reverse()
+			self.lines.extend(lst)
 
 		while self.lines:
-			(kind, line) = self.lines.pop(0)
+			(kind, line) = self.lines.pop()
 			if kind == POPFILE:
 				self.currentnode_stack.pop()
 				continue
