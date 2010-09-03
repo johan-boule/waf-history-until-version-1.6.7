@@ -640,13 +640,13 @@ class c_parser(object):
 				break
 			found = self.cached_find_resource(n, filename)
 
-		if not found:
-			if not filename in self.names:
-				self.names.append(filename)
-		else:
+		if found:
 			self.nodes.append(found)
 			if filename[-4:] != '.moc':
 				self.addlines(found)
+		else:
+			if not filename in self.names:
+				self.names.append(filename)
 		return found
 
 	def addlines(self, node):
