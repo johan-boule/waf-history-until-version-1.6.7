@@ -15,6 +15,12 @@
   #endif
 #elif B
   #if C
+	# if 1 - 1
+		#include "a.h"
+	# endif
+	# if 0
+	#include "a.h"
+	# endif
      #include <e.h>
   #else
      #include "f.h"
