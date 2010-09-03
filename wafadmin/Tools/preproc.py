@@ -613,7 +613,7 @@ class c_parser(object):
 
 		# file added
 		self.curfile = ''
-		self.ban_includes = []
+		self.ban_includes = set([])
 
 	def cached_find_resource(self, node, filename):
 		try:
@@ -742,7 +742,7 @@ class c_parser(object):
 		elif token == 'include' or token == 'import':
 			(kind, inc) = extract_include(line, self.defs)
 			if inc in self.ban_includes: return
-			if token == 'import': self.ban_includes.append(inc)
+			if token == 'import': self.ban_includes.add(inc)
 			if ve: debug('preproc: include found %s    (%s) ', inc, kind)
 			if kind == '"' or not strict_quotes:
 				self.tryfind(inc)
@@ -767,7 +767,7 @@ class c_parser(object):
 				#print "undef %s" % name
 		elif token == 'pragma':
 			if re_pragma_once.match(line.lower()):
-				self.ban_includes.append(self.curfile)
+				self.ban_includes.add(self.curfile)
 
 def get_deps(node, env, nodepaths=[]):
 	"""
