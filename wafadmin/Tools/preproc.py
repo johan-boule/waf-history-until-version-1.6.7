@@ -68,15 +68,16 @@ g_optrans = {
 
 # ignore #warning and #error
 re_lines = re.compile(\
-	'^[ \t]*(#|%:)[ \t]*(ifdef|ifndef|if|else|elif|endif|include|import|define|undef|pragma)[ \t]*(.*)\r*$',
+	'^[ \t]*(?:#|%:)[ \t]*(?:(ifdef|ifndef|define|undef)[ \t]*([a-zA-Z_]\w*)|(if|else|elif|endif|include|import|pragma)[ \t]*)(.*)\r*$',
 	re.IGNORECASE | re.MULTILINE)
 
+re_mac2 = re.compile("^([a-zA-Z_]\w*).*")
 re_mac = re.compile("^[a-zA-Z_]\w*")
 re_fun = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*[(]')
 re_pragma_once = re.compile('^\s*once\s*', re.IGNORECASE)
 re_nl = re.compile('\\\\\r*\n', re.MULTILINE)
 re_cpp = re.compile(\
-	r"""(/\*[^*]*\*+([^/*][^*]*\*+)*/)|//[^\n]*|("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|.[^/"'\\]*)""",
+	r"""(/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)|//[^\n]*|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|.[^/"'\\]*)""",
 	re.MULTILINE)
 trig_def = [('??'+a, b) for a, b in zip("=-/!'()<>", r'#~\|^[]{}')]
 chr_esc = {'0':0, 'a':7, 'b':8, 't':9, 'n':10, 'f':11, 'v':12, 'r':13, '\\':92, "'":39}
@@ -87,14 +88,14 @@ IDENT = 'T'
 STR   = 's'
 CHAR  = 'c'
 
-tok_types = [NUM, STR, IDENT, OP]
+tok_types = [IDENT, STR, OP, NUM]
 exp_types = [
-	r"""0[xX](?P<hex>[a-fA-F0-9]+)(?P<qual1>[uUlL]*)|L*?'(?P<char>(\\.|[^\\'])+)'|(?P<n1>\d+)[Ee](?P<exp0>[+-]*?\d+)(?P<float0>[fFlL]*)|(?P<n2>\d*\.\d+)([Ee](?P<exp1>[+-]*?\d+))?(?P<float1>[fFlL]*)|(?P<n4>\d+\.\d*)([Ee](?P<exp2>[+-]*?\d+))?(?P<float2>[fFlL]*)|(?P<oct>0*)(?P<n0>\d+)(?P<qual2>[uUlL]*)""",
-	r'L?"([^"\\]|\\.)*"',
 	r'[a-zA-Z_]\w*',
+	r'L?"([^"\\]|\\.)*"',
 	r'%:%:|<<=|>>=|\.\.\.|<<|<%|<:|<=|>>|>=|\+\+|\+=|--|->|-=|\*=|/=|%:|%=|%>|==|&&|&=|\|\||\|=|\^=|:>|!=|##|[\(\)\{\}\[\]<>\?\|\^\*\+&=:!#;,%/\-\?\~\.]',
+	r"""0[xX](?P<hex>[a-fA-F0-9]+)(?P<qual1>[uUlL]*)|L*?'(?P<char>(\\.|[^\\'])+)'|(?P<n1>\d+)[Ee](?P<exp0>[+-]*?\d+)(?P<float0>[fFlL]*)|(?P<n2>\d*\.\d+)([Ee](?P<exp1>[+-]*?\d+))?(?P<float1>[fFlL]*)|(?P<n4>\d+\.\d*)([Ee](?P<exp2>[+-]*?\d+))?(?P<float2>[fFlL]*)|(?P<oct>0*)(?P<n0>\d+)(?P<qual2>[uUlL]*)""",
 ]
-re_clexer = re.compile('|'.join(["(?P<%s>%s)" % (name, part) for name, part in zip(tok_types, exp_types)]), re.M)
+re_clexer = re.compile('|'.join(["(?P<%s>%s)" % (name, part) for name, part in zip(tok_types, exp_types)]))
 
 accepted  = 'a'
 ignored   = 'i'
@@ -104,7 +105,7 @@ skipped   = 's'
 def repl(m):
 	s = m.group(1)
 	if s is not None: return ' '
-	s = m.group(3)
+	s = m.group(2)
 	if s is None: return ''
 	return s
 
@@ -115,7 +116,7 @@ def filter_comments(filename):
 		for (a, b) in trig_def: code = code.split(a).join(b)
 	code = re_nl.sub('', code)
 	code = re_cpp.sub(repl, code)
-	return [(m.group(2), m.group(3)) for m in re.finditer(re_lines, code)]
+	return [m.group(1) and (m.group(1), m.group(2), m.group(4)) or (m.group(3), m.group(4)) for m in re.finditer(re_lines, code)]
 
 prec = {}
 # op -> number, needed for such expressions:   #if 1 && 2 != 0
@@ -571,6 +572,9 @@ def tokenize(s):
 						elif v.lower() == "false":
 							v = 0
 							name = NUM
+				elif name == STR:
+					# remove the quotes around the string
+					v = v[1:-1]
 				elif name == NUM:
 					if m('oct'): v = int(v, 8)
 					elif m('hex'): v = int(m('hex'), 16)
@@ -582,9 +586,6 @@ def tokenize(s):
 				elif name == OP:
 					if v == '%:': v = '#'
 					elif v == '%:%:': v = '##'
-				elif name == STR:
-					# remove the quotes around the string
-					v = v[1:-1]
 				ret.append((name, v))
 				break
 	return ret
@@ -697,20 +698,23 @@ class c_parser(object):
 			self.lines.extend(lst)
 
 		while self.lines:
-			(kind, line) = self.lines.pop()
-			if kind == POPFILE:
+			tup = self.lines.pop()
+			if tup[0] == POPFILE:
 				self.currentnode_stack.pop()
 				continue
 			try:
-				self.process_line(kind, line)
+				self.process_line(tup)
 			except Exception, e:
 				if Logs.verbose:
-					debug('preproc: line parsing failed (%s): %s %s', e, line, Utils.ex_stack())
+					debug('preproc: line parsing failed (%s): %r %s', e, tup, Utils.ex_stack())
 
-	def process_line(self, token, line):
+	def process_line(self, tup):
 		ve = Logs.verbose
 		if ve: debug('preproc: line is %s - %s state is %s', token, line, self.state)
 		state = self.state
+
+		token = tup[0]
+		line = tup[-1]
 
 		if token == 'endif':
 			state.pop()
@@ -732,12 +736,10 @@ class c_parser(object):
 			if ret: state.append(accepted)
 			else: state.append(ignored)
 		elif token == 'ifdef':
-			m = re_mac.match(line)
-			if m and m.group(0) in self.defs: state.append(accepted)
+			if tup[1] in self.defs: state.append(accepted)
 			else: state.append(ignored)
 		elif token == 'ifndef':
-			m = re_mac.match(line)
-			if m and m.group(0) in self.defs: state.append(ignored)
+			if tup[1] in self.defs: state.append(ignored)
 			else: state.append(accepted)
 		elif token == 'include' or token == 'import':
 			(kind, inc) = extract_include(line, self.defs)
@@ -748,14 +750,12 @@ class c_parser(object):
 				self.tryfind(inc)
 		elif token == 'define':
 			try:
-				self.defs[re_mac.match(line).group(0)]=line
-			except:
-				raise PreprocError("invalid define line %s"%line)
+				self.defs[tup[1]] = line and (tup[1] + line) or tup[1]
+			except Exception, e:
+				raise PreprocError("invalid define line %s" % line)
 		elif token == 'undef':
-			m = re_mac.match(line)
-			if m and m.group(0) in self.defs:
-				self.defs.__delitem__(m.group(0))
-				#print "undef %s" % name
+			if tup[1] in self.defs:
+				self.defs.__delitem__(tup[1])
 		elif token == 'pragma':
 			if re_pragma_once.match(line.lower()):
 				self.ban_includes.append(self.curfile)
