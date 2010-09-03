@@ -75,8 +75,8 @@ re_mac = re.compile("^[a-zA-Z_]\w*")
 re_fun = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*[(]')
 re_pragma_once = re.compile('^\s*once\s*', re.IGNORECASE)
 re_nl = re.compile('\\\\\r*\n', re.MULTILINE)
-re_cpp = re.compile(\
-	r"""(/\*[^*]*\*+([^/*][^*]*\*+)*/)|//[^\n]*|("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|.[^/"'\\]*)""",
+re_cpp = re.compile(
+	r"""(/\*[^*]*\*+(?:[^/*][^*]*\*+)*/)|//[^\n]*|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|.[^/"'\\]*)""",
 	re.MULTILINE)
 trig_def = [('??'+a, b) for a, b in zip("=-/!'()<>", r'#~\|^[]{}')]
 chr_esc = {'0':0, 'a':7, 'b':8, 't':9, 'n':10, 'f':11, 'v':12, 'r':13, '\\':92, "'":39}
@@ -102,10 +102,11 @@ undefined = 'u'
 skipped   = 's'
 
 def repl(m):
-	s = m.group(1)
-	if s is not None: return ' '
-	s = m.group(3)
-	if s is None: return ''
+	if m.group(1):
+		return ' '
+	s = m.group(2)
+	if s is None:
+		return ''
 	return s
 
 def filter_comments(filename):
