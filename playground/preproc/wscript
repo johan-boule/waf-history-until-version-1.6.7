@@ -114,20 +114,28 @@ def build(bld):
 
 
 	def add_defs(a, b, c, expected):
-		main = bld.path.find_resource('main.c')
+		main = bld.path.find_resource('src/main.c')
 		defs = ['A=%d' % a, 'B=%d' % b, 'C=%d' % c]
 		bld.env['DEFLINES'] = ["%s %s" %(x[0], Utils.trimquotes('='.join(x[1:]))) for x in [y.split('=') for y in defs]]
-		gruik = preproc.c_parser([bld.path])
+		gruik = preproc.c_parser([main.parent])
 		gruik.start(main, bld.env)
 
 		if len(gruik.nodes) == 1 and gruik.nodes[0].name == expected:
 			color = "GREEN"
 		else:
 			color = "RED"
-		Utils.pprint(color, "%r %r %r -> header %s" % (a, b, c, expected))
+		Utils.pprint(color, "%r %r %r -> header %s (got %r)" % (a, b, c, expected, gruik.nodes))
 
 	add_defs(1, 1, 1, 'a.h')
-	add_defs(1, 0, 1, 'b.h')
+	add_defs(1, 1, 0, 'b.h')
+	add_defs(1, 0, 1, 'c.h')
+	add_defs(1, 0, 0, 'd.h')
+	add_defs(0, 1, 1, 'e.h')
+	add_defs(0, 1, 0, 'f.h')
+	add_defs(0, 0, 1, 'g.h')
+	add_defs(0, 0, 0, 'h.h')
+
+
 
 	return
 	test("1?1,(0?5:9):3,4", 0) # <- invalid expression
