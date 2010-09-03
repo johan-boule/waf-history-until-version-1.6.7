@@ -13,6 +13,13 @@ import Utils
 import preproc
 from preproc import NUM, OP, IDENT
 
+try:
+	from waflib import Logs
+except:
+	pass
+else:
+	Utils.pprint = Logs.pprint
+
 def configure(conf):
 	conf.check_tool('gcc')
 
