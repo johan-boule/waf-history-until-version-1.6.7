@@ -77,6 +77,7 @@ def get_cc_version(conf, cc, gcc=False, icc=False):
 			'_UWIN'       : 'uwin',
 			'_WIN64'      : 'win32',
 			'_WIN32'      : 'win32',
+			'__POWERPC__' : 'powerpc',
 			}
 
 		for i in mp1:
@@ -91,6 +92,10 @@ def get_cc_version(conf, cc, gcc=False, icc=False):
 
 		if isD('__ELF__'):
 			conf.env.DEST_BINFMT = 'elf'
+		elif isD('__WINNT__') or isD('__CYGWIN__'):
+			conf.env.DEST_BINFMT = 'pe'
+		elif isD('__APPLE__'):
+			conf.env.DEST_BINFMT = 'mac-o'
 
 		mp2 = {
 				'__x86_64__'  : 'x86_64',
