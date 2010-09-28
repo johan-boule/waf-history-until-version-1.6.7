@@ -554,6 +554,7 @@ def parse_char(txt):
 		try: return chr_esc[c]
 		except KeyError: raise PreprocError("could not parse char literal '%s'" % txt)
 
+@Utils.run_once
 def tokenize(s):
 	"""convert a string into a list of tokens (shlex.split does not apply to c/c++/d)"""
 	ret = []
@@ -589,6 +590,10 @@ def tokenize(s):
 				ret.append((name, v))
 				break
 	return ret
+
+@Utils.run_once
+def define_name(line):
+	return re_mac.match(line).group(0)
 
 class c_parser(object):
 	def __init__(self, nodepaths=None, defines=None):
@@ -757,7 +762,7 @@ class c_parser(object):
 			elif state[-1] == ignored: state[-1] = accepted
 		elif token == 'define':
 			try:
-				self.defs[re_mac.match(line).group(0)] = line
+				self.defs[define_name(line)] = line
 			except:
 				raise PreprocError("invalid define line %s" % line)
 		elif token == 'undef':
