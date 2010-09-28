@@ -1069,8 +1069,10 @@ def always_run(cls):
 	"""
 	old = cls.runnable_status
 	def always(self):
-		old(self)
-		return RUN_ME
+		ret = old(self)
+		if ret == SKIP_ME:
+			return RUN_ME
+		return ret
 	cls.runnable_status = always
 
 def update_outputs(cls):
