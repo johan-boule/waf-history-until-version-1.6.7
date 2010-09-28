@@ -36,7 +36,7 @@ class PreprocError(Utils.WafError):
 POPFILE = '-'
 
 
-recursion_limit = 100
+recursion_limit = 5000
 "do not loop too much on header inclusion"
 
 go_absolute = 0
