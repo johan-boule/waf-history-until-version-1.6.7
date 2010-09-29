@@ -51,7 +51,7 @@ def repli(task):
 	txt = txt.replace('.txt[', '_ug.txt[')
 	txt = txt.replace('.eps[', '.png[')
 	txt = txt.replace('[source,make]', '[source,makefile]')
-	txt = txt.replace('[source,shishell]', '')
+	#txt = txt.replace('[source,shishell]', '')
 	txt = re_size.sub(repl, txt)
 	f = open(task.outputs[0].abspath(task.env), 'w')
 	f.write(txt)
