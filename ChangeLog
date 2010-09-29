@@ -2,7 +2,7 @@ NEW IN WAF 1.5.19
 -----------------
 * fixed #725 (docs)
 * fixed #747 (Task.always was broken)
-* optimization in preproc.py
+* various optimizations in preproc.py
 
 NEW IN WAF 1.5.18
 -----------------
