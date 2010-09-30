@@ -1,6 +1,8 @@
 WHAT YOU WILL FIND HERE
 -----------------------
 
+WARNING: this is waf 1.5, for waf 1.6, use waf trunk
+
 A python script named "Waf"
 It is used to help building software (it is also called a "build system"):
  * detect configuration variables
