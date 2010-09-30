@@ -2,6 +2,11 @@ NEW IN WAF 1.5.19
 -----------------
 * fixed #725 (docs)
 * fixed #747 (Task.always was broken)
+* fixed unit test execution (always)
+* improve the tex/latex dependency scanner
+* parse c++0x flags from pkg-config
+* force the file order in ant_glob
+* fix a few bugs in ansiterm.py
 * various optimizations in preproc.py
 
 NEW IN WAF 1.5.18
