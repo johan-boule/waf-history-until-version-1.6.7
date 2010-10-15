@@ -47,37 +47,37 @@ def parse_flags(line, uselib, env):
 		x = lst.pop(0)
 		st = x[:2]
 		ot = x[2:]
-
+		app = env.append_value
 		if st == '-I' or st == '/I':
 			if not ot: ot = lst.pop(0)
-			env.append_unique('CPPPATH_' + uselib, ot)
+			app('CPPPATH_' + uselib, ot)
 		elif st == '-D':
 			if not ot: ot = lst.pop(0)
-			env.append_unique('CXXDEFINES_' + uselib, ot)
-			env.append_unique('CCDEFINES_' + uselib, ot)
+			app('CXXDEFINES_' + uselib, ot)
+			app('CCDEFINES_' + uselib, ot)
 		elif st == '-l':
 			if not ot: ot = lst.pop(0)
-			env.append_unique('LIB_' + uselib, ot)
+			app('LIB_' + uselib, ot)
 		elif st == '-L':
 			if not ot: ot = lst.pop(0)
-			env.append_unique('LIBPATH_' + uselib, ot)
+			app('LIBPATH_' + uselib, ot)
 		elif x == '-pthread' or x.startswith('+'):
-			env.append_unique('CCFLAGS_' + uselib, x)
-			env.append_unique('CXXFLAGS_' + uselib, x)
-			env.append_unique('LINKFLAGS_' + uselib, x)
+			app('CCFLAGS_' + uselib, x)
+			app('CXXFLAGS_' + uselib, x)
+			app('LINKFLAGS_' + uselib, x)
 		elif x == '-framework':
-			env.append_unique('FRAMEWORK_' + uselib, lst.pop(0))
+			app('FRAMEWORK_' + uselib, lst.pop(0))
 		elif x.startswith('-F'):
-			env.append_unique('FRAMEWORKPATH_' + uselib, x[2:])
+			app('FRAMEWORKPATH_' + uselib, x[2:])
 		elif x.startswith('-std'):
-			env.append_unique('CCFLAGS_' + uselib, x)
-			env.append_unique('CXXFLAGS_' + uselib, x)
-			env.append_unique('LINKFLAGS_' + uselib, x)
+			app('CCFLAGS_' + uselib, x)
+			app('CXXFLAGS_' + uselib, x)
+			app('LINKFLAGS_' + uselib, x)
 		elif x.startswith('-Wl'):
-			env.append_unique('LINKFLAGS_' + uselib, x)
+			app('LINKFLAGS_' + uselib, x)
 		elif x.startswith('-m') or x.startswith('-f'):
-			env.append_unique('CCFLAGS_' + uselib, x)
-			env.append_unique('CXXFLAGS_' + uselib, x)
+			app('CCFLAGS_' + uselib, x)
+			app('CXXFLAGS_' + uselib, x)
 
 @conf
 def ret_msg(self, f, kw):

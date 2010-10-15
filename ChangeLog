@@ -1,3 +1,7 @@
+NEW IN WAF 1.5.20
+-----------------
+* parse_flags should not filter the flags (for apple)
+
 NEW IN WAF 1.5.19
 -----------------
 * fixed #725 (docs)
