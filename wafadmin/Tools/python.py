@@ -34,7 +34,7 @@ int main()
 @feature('pyext')
 @before('apply_bundle')
 def init_pyext(self):
-	self.default_install_path = '${PYTHONDIR}'
+	self.default_install_path = '${PYTHONARCHDIR}'
 	self.uselib = self.to_list(getattr(self, 'uselib', ''))
 	if not 'PYEXT' in self.uselib:
 		self.uselib.append('PYEXT')
@@ -344,8 +344,19 @@ def check_python_version(conf, minver=None):
 				else:
 					python_LIBDEST = os.path.join(conf.env['PREFIX'], "lib", "python" + pyver)
 
+		if 'PYTHONARCHDIR' in conf.environ:
+			pyarchdir = conf.environ['PYTHONARCHDIR']
+		else:
+			pyarchdir = conf.get_python_variables(python,
+											["get_python_lib(plat_specific=1, standard_lib=0, prefix=%r)" % conf.env['PREFIX']],
+											['from distutils.sysconfig import get_config_var, get_python_lib'])
+			if not pyarchdir:
+				pyarchdir = pydir
+
 		if hasattr(conf, 'define'): # conf.define is added by the C tool, so may not exist
 			conf.define('PYTHONDIR', pydir)
+			conf.define('PYTHONARCHDIR', pydir)
+
 		conf.env['PYTHONDIR'] = pydir
 
 	# Feedback
