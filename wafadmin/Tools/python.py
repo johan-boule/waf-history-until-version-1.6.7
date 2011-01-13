@@ -30,9 +30,9 @@ int main()
 }
 '''
 
-@before('apply_incpaths', 'apply_lib_vars', 'apply_type_vars')
 @feature('pyext')
-@before('apply_bundle')
+@before('apply_incpaths', 'apply_lib_vars', 'apply_type_vars', 'apply_bundle')
+@after('vars_target_cshlib')
 def init_pyext(self):
 	self.default_install_path = '${PYTHONARCHDIR}'
 	self.uselib = self.to_list(getattr(self, 'uselib', ''))
