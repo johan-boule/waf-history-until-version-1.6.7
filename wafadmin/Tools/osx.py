@@ -162,6 +162,7 @@ def apply_bundle_remove_dynamiclib(self):
 		if not getattr(self, 'vnum', None):
 			try:
 				self.env['LINKFLAGS'].remove('-dynamiclib')
+				self.env['LINKFLAGS'].remove('-single_module')
 			except ValueError:
 				pass
 
