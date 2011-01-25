@@ -703,12 +703,12 @@ def get_config_header(self):
 @conftest
 def find_cpp(conf):
 	v = conf.env
-	cpp = None
+	cpp = []
 	if v['CPP']: cpp = v['CPP']
 	elif 'CPP' in conf.environ: cpp = conf.environ['CPP']
 	if not cpp: cpp = conf.find_program('cpp', var='CPP')
-	if not cpp: cpp = v['CC']
-	if not cpp: cpp = v['CXX']
+	#if not cpp: cpp = v['CC']
+	#if not cpp: cpp = v['CXX']
 	v['CPP'] = cpp
 
 @conftest

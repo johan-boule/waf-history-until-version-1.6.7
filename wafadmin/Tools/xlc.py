@@ -23,7 +23,7 @@ def find_cpp(conf):
 	cpp = None
 	if v['CPP']: cpp = v['CPP']
 	elif 'CPP' in conf.environ: cpp = conf.environ['CPP']
-	if not cpp: cpp = v['CC']
+	#if not cpp: cpp = v['CC']
 	v['CPP'] = cpp
 
 @conftest
