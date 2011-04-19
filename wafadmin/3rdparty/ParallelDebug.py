@@ -1,65 +1,70 @@
 #! /usr/bin/env python
 # encoding: utf-8
-# Thomas Nagy, 2007 (ita)
+# Thomas Nagy, 2007-2010 (ita)
 
 """
 debugging helpers for parallel compilation, outputs
 a svg file in the build directory
 """
 
-import time, threading, random, Queue
-import Runner, Options, Utils
+import time, sys, threading
+try: from Queue import Queue
+except: from queue import Queue
+import Runner, Options, Utils, Task, Logs
 from Constants import *
-from Runner import TaskConsumer
 
-random.seed(100)
+#import random
+#random.seed(100)
 
-WIDTH = 5000
-INTERVAL = 0.009
-BAND = 22
+def set_options(opt):
+	opt.add_option('--dtitle', action='store', default='Parallel build representation for %r' % ' '.join(sys.argv),
+		help='title for the svg diagram', dest='dtitle')
+	opt.add_option('--dwidth', action='store', type='int', help='diagram width', default=1000, dest='dwidth')
+	opt.add_option('--dtime', action='store', type='float', help='recording interval in seconds', default=0.009, dest='dtime')
+	opt.add_option('--dband', action='store', type='int', help='band width', default=22, dest='dband')
+	opt.add_option('--dmaxtime', action='store', type='float', help='maximum time, for drawing fair comparisons', default=0, dest='dmaxtime')
 
 # red   #ff4d4d
 # green #4da74d
 # lila  #a751ff
 
-Utils.g_module.title = "Parallel build representation for 'waf -j12 -l4.0 -p' a dual-core cpu, starting with an initial load of 1.0"
-
-mp = {
-'cc': '#4da74d',
-'cxx': '#4da74d',
-'copy_script': '#ff0000',
-'cc_link' : '#a751ff',
-'static_link': '#a751ff'
+color2code = {
+	'GREEN'  : '#4da74d',
+	'YELLOW' : '#fefe44',
+	'PINK'   : '#a751ff',
+	'RED'    : '#cc1d1d',
+	'BLUE'   : '#6687bb',
+	'CYAN'   : '#34e2e2',
 }
 
-info = {
-'#4da74d': 'Compilation task',
-'#cc1d1d': 'Other',
-'#a751ff': 'Link task'
-}
+mp = {}
+info = [] # list of (text,color)
 
 def map_to_color(name):
 	if name in mp:
 		return mp[name]
-	return "#cc1d1d"
-
-
-taskinfo = Queue.Queue()
-state = 0
-def set_running(by, i, tsk):
-	taskinfo.put(  (i, id(tsk), time.time(), tsk.__class__.__name__)  )
+	try:
+		cls = Task.TaskBase.classes[name]
+	except KeyError:
+		return color2code['RED']
+	if cls.color in mp:
+		return mp[cls.color]
+	if cls.color in color2code:
+		return color2code[cls.color]
+	return color2code['RED']
 
 def newrun(self):
 
 	if 1 == 1:
+		m = self.master
 		while 1:
-			tsk = TaskConsumer.ready.get()
-			m = tsk.master
+			tsk = m.ready.get()
 			if m.stop:
 				m.out.put(tsk)
 				continue
 
-			set_running(1, id(self), tsk)
+			self.master.set_running(1, id(threading.currentThread()), tsk)
+			#set_running(1, id(self), tsk)
 			try:
 				tsk.generator.bld.printout(tsk.display())
 				if tsk.__class__.stat: ret = tsk.__class__.stat(tsk)
@@ -92,40 +97,65 @@ def newrun(self):
 			if tsk.hasrun != SUCCESS:
 				m.error_handler(tsk)
 
-			set_running(-1, id(self), tsk)
+			self.master.set_running(-1, id(threading.currentThread()), tsk)
+			#set_running(-1, id(self), tsk)
 			m.out.put(tsk)
-
-
 
 
 Runner.TaskConsumer.run = newrun
 
 old_start = Runner.Parallel.start
 def do_start(self):
+        print Options.options
+	try:
+		Options.options.dband
+	except AttributeError:
+		raise ValueError('use def options(opt): opt.load("parallel_debug")!')
+
+	self.taskinfo = Queue()
 	old_start(self)
-	process_colors(taskinfo)
+	process_colors(self)
 Runner.Parallel.start = do_start
 
-def process_colors(q):
+def set_running(self, by, i, tsk):
+	self.taskinfo.put( (i, id(tsk), time.time(), tsk.__class__.__name__, self.processed, self.count, by)  )
+Runner.Parallel.set_running = set_running
+
+def process_colors(producer):
+	# first, cast the parameters
 	tmp = []
 	try:
 		while True:
-			(s, t, tm, clsname) = q.get(False)
-			tmp.append([s, t, tm, clsname])
+			tup = producer.taskinfo.get(False)
+			tmp.append(list(tup))
 	except:
 		pass
-
-#file = open('colors.dat', 'rb')
-#code = file.read()
-#file.close()
-
-#lst = code.strip().split('\n')
-#tmp = [x.split() for x in lst]
 
 	try:
 		ini = float(tmp[0][2])
 	except:
 		return
+
+	if not info:
+		seen = []
+		for x in tmp:
+			name = x[3]
+			if not name in seen:
+				seen.append(name)
+			else:
+				continue
+
+			info.append((name, map_to_color(name)))
+		info.sort(key=lambda x: x[0])
+
+	thread_count = 0
+	acc = []
+	for x in tmp:
+		thread_count += x[6]
+		acc.append("%d %d %f %r %d %d %d" % (x[0], x[1], x[2] - ini, x[3], x[4], x[5], thread_count))
+	f = open('pdebug.dat', 'w')
+	#Utils.write('\n'.join(acc))
+	f.write('\n'.join(acc))
 
 	tmp = [lst[:2] + [float(lst[2]) - ini] + lst[3:] for lst in tmp]
 
@@ -143,9 +173,11 @@ def process_colors(q):
 	tmp = [  [lst[0]] + [st[lst[1]]] + lst[2:] for lst in tmp ]
 
 
+	BAND = Options.options.dband
+
 	seen = {}
 	acc = []
-	for x in xrange(len(tmp)):
+	for x in range(len(tmp)):
 		line = tmp[x]
 		id = line[1]
 
@@ -155,7 +187,7 @@ def process_colors(q):
 
 		begin = line[2]
 		thread_id = line[0]
-		for y in xrange(x + 1, len(tmp)):
+		for y in range(x + 1, len(tmp)):
 			line = tmp[y]
 			if line[1] == id:
 				end = line[2]
@@ -164,15 +196,19 @@ def process_colors(q):
 				acc.append( (BAND * begin, BAND*thread_id, BAND*end - BAND*begin, BAND, line[3]) )
 				break
 
-	gwidth = 0
-	for x in tmp:
+	if Options.options.dmaxtime < 0.1:
+		gwidth = 1
+		for x in tmp:
 			m = BAND * x[2]
-			if m > gwidth: gwidth = m
+			if m > gwidth:
+				gwidth = m
+	else:
+		gwidth = BAND * Options.options.dmaxtime
 
-	ratio = float(WIDTH) / gwidth
-	gwidth = WIDTH
+	ratio = float(Options.options.dwidth) / gwidth
+	gwidth = Options.options.dwidth
 
-	gheight = BAND * (THREAD_AMOUNT + len(info.keys()) + 1.5)
+	gheight = BAND * (THREAD_AMOUNT + len(info) + 1.5)
 
 	out = []
 
@@ -182,11 +218,21 @@ def process_colors(q):
 <svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.0\"
    x=\"%r\" y=\"%r\" width=\"%r\" height=\"%r\"
    id=\"svg602\" xml:space=\"preserve\">
-<defs id=\"defs604\" />\n""" % (-1, -1, gwidth + 3, gheight + 2))
+<defs id=\"defs604\" />\n
+
+<!-- inkscape requires a big rectangle or it will not export the pictures properly -->
+<rect
+   x='%r' y='%r'
+   width='%r' height='%r'
+   style=\"font-size:10;fill:#ffffff;fill-opacity:0.01;fill-rule:evenodd;stroke:#ffffff;\"
+   />\n
+
+""" % (0, 0, gwidth + 4, gheight + 4,   0, 0, gwidth + 4, gheight + 4))
 
 	# main title
-	out.append("""<text x="%d" y="%d" style="font-size:15px; text-anchor:middle; font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans">%s</text>
-""" % (gwidth/2, gheight - 5, Utils.g_module.title))
+	if Options.options.dtitle:
+		out.append("""<text x="%d" y="%d" style="font-size:15px; text-anchor:middle; font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans">%s</text>
+""" % (gwidth/2, gheight - 5, Options.options.dtitle))
 
 	# the rectangles
 	for (x, y, w, h, clsname) in acc:
@@ -194,31 +240,30 @@ def process_colors(q):
    x='%r' y='%r'
    width='%r' height='%r'
    style=\"font-size:10;fill:%s;fill-opacity:1.0;fill-rule:evenodd;stroke:#000000;\"
-   />\n""" % (x*ratio, y, w*ratio, h, map_to_color(clsname)))
+   />\n""" % (2 + x*ratio, 2 + y, w*ratio, h, map_to_color(clsname)))
 
 	# output the caption
 	cnt = THREAD_AMOUNT
-	for (color, text) in info.iteritems():
+
+	for (text, color) in info:
 		# caption box
 		b = BAND/2
 		out.append("""<rect
 		x='%r' y='%r'
 		width='%r' height='%r'
 		style=\"font-size:10;fill:%s;fill-opacity:1.0;fill-rule:evenodd;stroke:#000000;\"
-  />\n""" % (BAND, (cnt + 0.5) * BAND, b, b, color))
+  />\n""" %                       (2 + BAND,     5 + (cnt + 0.5) * BAND, b, b, color))
 
 		# caption text
 		out.append("""<text
    style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
-   x="%r" y="%d">%s</text>\n""" % (2 * BAND, (cnt+1) * BAND, text))
+   x="%r" y="%d">%s</text>\n""" % (2 + 2 * BAND, 5 + (cnt + 0.5) * BAND + 10, text))
 		cnt += 1
 
 	out.append("\n</svg>")
 
-	file = open("foo.svg", "wb")
-	file.write("".join(out))
-	file.close()
+	#node = producer.bld.path.make_node('pdebug.svg')
+	f = open('pdebug.svg', 'w')
+	f.write("".join(out))
 
-	import os
-	os.popen("convert foo.svg foo.png").read()
 
