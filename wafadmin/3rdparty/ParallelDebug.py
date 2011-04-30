@@ -7,7 +7,7 @@ debugging helpers for parallel compilation, outputs
 a svg file in the build directory
 """
 
-import time, sys, threading
+import os, time, sys, threading
 try: from Queue import Queue
 except: from queue import Queue
 import Runner, Options, Utils, Task, Logs
@@ -35,6 +35,7 @@ color2code = {
 	'RED'    : '#cc1d1d',
 	'BLUE'   : '#6687bb',
 	'CYAN'   : '#34e2e2',
+
 }
 
 mp = {}
@@ -53,56 +54,14 @@ def map_to_color(name):
 		return color2code[cls.color]
 	return color2code['RED']
 
-def newrun(self):
+def loop(self):
+	while 1:
+		tsk=Runner.TaskConsumer.ready.get()
+		tsk.master.set_running(1, id(threading.currentThread()), tsk)
+		Runner.process_task(tsk)
+		tsk.master.set_running(-1, id(threading.currentThread()), tsk)
+Runner.TaskConsumer.loop = loop
 
-	if 1 == 1:
-		m = self.master
-		while 1:
-			tsk = m.ready.get()
-			if m.stop:
-				m.out.put(tsk)
-				continue
-
-			self.master.set_running(1, id(threading.currentThread()), tsk)
-			#set_running(1, id(self), tsk)
-			try:
-				tsk.generator.bld.printout(tsk.display())
-				if tsk.__class__.stat: ret = tsk.__class__.stat(tsk)
-				# actual call to task's run() function
-				else: ret = tsk.call_run()
-			except Exception, e:
-				tsk.err_msg = Utils.ex_stack()
-				tsk.hasrun = EXCEPTION
-
-				# TODO cleanup
-				m.error_handler(tsk)
-				m.out.put(tsk)
-				continue
-
-			#time.sleep(1 + 2* random.random())
-
-			if ret:
-				tsk.err_code = ret
-				tsk.hasrun = CRASHED
-			else:
-				try:
-					tsk.post_run()
-				except Utils.WafError:
-					pass
-				except Exception:
-					tsk.err_msg = Utils.ex_stack()
-					tsk.hasrun = EXCEPTION
-				else:
-					tsk.hasrun = SUCCESS
-			if tsk.hasrun != SUCCESS:
-				m.error_handler(tsk)
-
-			self.master.set_running(-1, id(threading.currentThread()), tsk)
-			#set_running(-1, id(self), tsk)
-			m.out.put(tsk)
-
-
-Runner.TaskConsumer.run = newrun
 
 old_start = Runner.Parallel.start
 def do_start(self):
@@ -120,6 +79,9 @@ Runner.Parallel.start = do_start
 def set_running(self, by, i, tsk):
 	self.taskinfo.put( (i, id(tsk), time.time(), tsk.__class__.__name__, self.processed, self.count, by)  )
 Runner.Parallel.set_running = set_running
+
+def name2class(name):
+	return name.replace(' ', '_').replace('.', '_')
 
 def process_colors(producer):
 	# first, cast the parameters
@@ -218,12 +180,61 @@ def process_colors(producer):
 <svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.0\"
    x=\"%r\" y=\"%r\" width=\"%r\" height=\"%r\"
    id=\"svg602\" xml:space=\"preserve\">
-<defs id=\"defs604\" />\n
+
+<style type='text/css' media='screen'>
+    g.over rect  { stroke:#FF0000; fill-opacity:0.4 }
+</style>
+
+<script type='text/javascript'><![CDATA[
+    var svg  = document.getElementsByTagName('svg')[0];
+    var svgNS = svg.getAttribute('xmlns');
+    svg.addEventListener('mouseover',function(e){
+      var g = e.target.parentNode;
+      var x = document.getElementById('r_'+g.id);
+      if (x) {
+         g.setAttribute('class', g.getAttribute('class')+' over');
+         x.setAttribute('class', x.getAttribute('class')+' over');
+         showInfo(e, g.id);
+      }
+    },false);
+    svg.addEventListener('mouseout',function(e){
+      var g = e.target.parentNode;
+      var x = document.getElementById('r_'+g.id);
+      if (x) {
+         g.setAttribute('class',g.getAttribute('class').replace(' over',''));
+         x.setAttribute('class',x.getAttribute('class').replace(' over',''));
+         hideInfo(e);
+      }
+    },false);
+
+function showInfo(evt, txt) {
+    tooltip = document.getElementById('tooltip');
+
+    var t = document.getElementById('tooltiptext');
+    t.firstChild.data = txt;
+
+    var x = evt.clientX+10;
+    if (x > 200) { x -= t.getComputedTextLength() + 16; }
+    var y = evt.clientY+30;
+    tooltip.setAttribute("transform", "translate(" + x + "," + y + ")");
+    tooltip.setAttributeNS(null,"visibility","visible");
+
+    var r = document.getElementById('tooltiprect');
+    r.setAttribute('width', t.getComputedTextLength()+6)
+}
+
+
+function hideInfo(evt) {
+    tooltip = document.getElementById('tooltip');
+    tooltip.setAttributeNS(null,"visibility","hidden");
+}
+
+]]></script>
 
 <!-- inkscape requires a big rectangle or it will not export the pictures properly -->
 <rect
    x='%r' y='%r'
-   width='%r' height='%r'
+   width='%r' height='%r' z-index='10'
    style=\"font-size:10;fill:#ffffff;fill-opacity:0.01;fill-rule:evenodd;stroke:#ffffff;\"
    />\n
 
@@ -235,12 +246,25 @@ def process_colors(producer):
 """ % (gwidth/2, gheight - 5, Options.options.dtitle))
 
 	# the rectangles
+	groups = {}
 	for (x, y, w, h, clsname) in acc:
-		out.append("""<rect
+		try:
+			groups[clsname].append((x, y, w, h))
+		except:
+			groups[clsname] = [(x, y, w, h)]
+
+	for cls in groups:
+
+		out.append("<g id='%s'>\n" % name2class(cls))
+
+		for (x, y, w, h) in groups[cls]:
+			out.append("""   <rect
    x='%r' y='%r'
-   width='%r' height='%r'
-   style=\"font-size:10;fill:%s;fill-opacity:1.0;fill-rule:evenodd;stroke:#000000;\"
-   />\n""" % (2 + x*ratio, 2 + y, w*ratio, h, map_to_color(clsname)))
+   width='%r' height='%r' z-index='11'
+   style=\"font-size:10;fill:%s;fill-rule:evenodd;stroke:#000000;stroke-width:0.2px;\"
+   />\n""" % (2 + x*ratio, 2 + y, w*ratio, h, map_to_color(cls)))
+
+		out.append("</g>\n")
 
 	# output the caption
 	cnt = THREAD_AMOUNT
@@ -248,17 +272,23 @@ def process_colors(producer):
 	for (text, color) in info:
 		# caption box
 		b = BAND/2
-		out.append("""<rect
+		out.append("""<g id='r_%s'><rect
 		x='%r' y='%r'
 		width='%r' height='%r'
-		style=\"font-size:10;fill:%s;fill-opacity:1.0;fill-rule:evenodd;stroke:#000000;\"
-  />\n""" %                       (2 + BAND,     5 + (cnt + 0.5) * BAND, b, b, color))
+		style=\"font-size:10;fill:%s;fill-rule:evenodd;stroke:#000000;stroke-width:0.2px;\"
+  />\n""" %                       (name2class(text), 2 + BAND,     5 + (cnt + 0.5) * BAND, b, b, color))
 
 		# caption text
 		out.append("""<text
    style="font-size:12px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-family:Bitstream Vera Sans"
-   x="%r" y="%d">%s</text>\n""" % (2 + 2 * BAND, 5 + (cnt + 0.5) * BAND + 10, text))
+   x="%r" y="%d">%s</text></g>\n""" % (2 + 2 * BAND, 5 + (cnt + 0.5) * BAND + 10, text))
 		cnt += 1
+
+	out.append("""
+<g transform="translate(0,0)" visibility="hidden" id="tooltip">
+  <rect id="tooltiprect" y="-15" x="-3" width="1" height="20" style="stroke:black;fill:#edefc2;stroke-width:1"/>
+  <text id="tooltiptext" style="font-family:Arial; font-size:12;fill:black;"> </text>
+</g>""")
 
 	out.append("\n</svg>")
 
