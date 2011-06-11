@@ -62,10 +62,10 @@ def sweep(self):
 		flist[x][1] = cnt
 
 	total = sum([x[1] for x in flist.values()])
-	Logs.debug('lru:Cache size is %r' % total)
+	Logs.debug('lru: Cache size is %r' % total)
 
 	if total >= CACHESIZE:
-		Logs.debug('lru:Trimming the cache since %r > %r' % (total, CACHESIZE))
+		Logs.debug('lru: Trimming the cache since %r > %r' % (total, CACHESIZE))
 
 		# make a list to sort the folders by timestamp
 		lst = [(p, v[0], v[1]) for (p, v) in flist.items()]
@@ -89,7 +89,7 @@ def sweep(self):
 					Logs.warn('If you ever see this message, report it (%r)' % v)
 			total -= s
 			del flist[k]
-	Logs.debug('lru:Total at the end %r' % total)
+	Logs.debug('lru: Total at the end %r' % total)
 
 Build.BuildContext.raw_compile = Build.BuildContext.compile
 Build.BuildContext.compile = compile
