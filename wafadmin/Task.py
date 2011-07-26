@@ -1090,6 +1090,7 @@ def update_outputs(cls):
 		bld = self.generator.bld
 		for output in self.outputs:
 			bld.node_sigs[self.env.variant()][output.id] = Utils.h_file(output.abspath(self.env))
+			bld.task_sigs[output.id] = self.unique_id()
 	cls.post_run = post_run
 
 	old_runnable_status = cls.runnable_status
@@ -1098,13 +1099,16 @@ def update_outputs(cls):
 		if status != RUN_ME:
 			return status
 
+		uid = self.unique_id()
 		try:
 			bld = self.outputs[0].__class__.bld
 			new_sig  = self.signature()
-			prev_sig = bld.task_sigs[self.unique_id()][0]
+			prev_sig = bld.task_sigs[uid][0]
 			if prev_sig == new_sig:
 				for x in self.outputs:
 					if not x.id in bld.node_sigs[self.env.variant()]:
+						return RUN_ME
+					if bld.task_sigs[x.id] != uid: # ensure the outputs are associated with *this* task
 						return RUN_ME
 				return SKIP_ME
 		except KeyError:
